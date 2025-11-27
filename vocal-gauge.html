@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고음 발성 시스템 게이지</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-size: 2em;
+        }
+
+        /* 음 높이 그래프 섹션 */
+        .pitch-graph-section {
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .pitch-graph-label {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .pitch-graph-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .pitch-curve {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .pitch-point {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ff6b6b;
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .pitch-point:hover {
+            width: 24px;
+            height: 24px;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+        }
+
+        .pitch-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pitch-button {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .pitch-button:hover {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .pitch-button.active {
+            background: #ff6b6b;
+            color: white;
+            border-color: #ff6b6b;
+        }
+
+        /* 에너지 게이지 섹션 */
+        .energy-section {
+            margin-bottom: 30px;
+        }
+
+        .energy-gauges {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .energy-gauge-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .energy-gauge-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .energy-gauge-container {
+            width: 100%;
+            height: 40px;
+            background: #e0e0e0;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .energy-gauge-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .required-energy .energy-gauge-fill {
+            background: linear-gradient(90deg, #ffd700 0%, #ff8c00 100%);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .current-energy .energy-gauge-fill {
+            background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+            box-shadow: 0 0 15px rgba(67, 233, 123, 0.5);
+        }
+
+        .energy-gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1em;
+            font-weight: bold;
+            color: #2c3e50;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        /* 상태 표시 */
+        .status-indicator {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator.cannot-sound {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .status-indicator.can-sound {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4);
+            }
+            50% {
+                box-shadow: 0 4px 25px rgba(67, 233, 123, 0.8);
+            }
+        }
+
+        /* 4가지 요소 게이지 */
+        .sub-gauges-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .gauge-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .gauge-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+
+        .gauge-container {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 10px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .gauge-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 15px;
+            transition: width 0.3s ease;
+        }
+
+        .gauge-voice-switch .gauge-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .gauge-throat-tension .gauge-fill {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 0 10px rgba(240, 147, 251, 0.5);
+        }
+
+        .gauge-breathing .gauge-fill {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+        }
+
+        .gauge-vocal-cords .gauge-fill {
+            background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2c3e50;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2c3e50;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .value-display {
+            margin-top: 5px;
+            text-align: right;
+            font-size: 0.9em;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .contribution-label {
+            font-size: 0.85em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .reset-button {
+            margin-top: 10px;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .reset-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-button:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 600px) {
+            .sub-gauges-section, .energy-gauges {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>고음 발성 시스템</h1>
+
+        <!-- 음 높이 그래프 섹션 -->
+        <div class="pitch-graph-section">
+            <div class="pitch-graph-label">음 높이 선택</div>
+            <div class="pitch-graph-container">
+                <svg class="pitch-curve" id="pitchCurve">
+                    <!-- 곡선은 JavaScript로 그림 -->
+                </svg>
+                <div class="pitch-point" id="pitchPoint"></div>
+            </div>
+            <div class="pitch-selector">
+                <button class="pitch-button active" onclick="selectPitch(1)">C4 (낮음)</button>
+                <button class="pitch-button" onclick="selectPitch(2)">D4</button>
+                <button class="pitch-button" onclick="selectPitch(3)">E4</button>
+                <button class="pitch-button" onclick="selectPitch(4)">F4</button>
+                <button class="pitch-button" onclick="selectPitch(5)">G4</button>
+                <button class="pitch-button" onclick="selectPitch(6)">A4 (높음)</button>
+                <button class="pitch-button" onclick="selectPitch(7)">B4 (매우 높음)</button>
+            </div>
+        </div>
+
+        <!-- 에너지 게이지 비교 섹션 -->
+        <div class="energy-section">
+            <div class="energy-gauges">
+                <div class="energy-gauge-item required-energy">
+                    <div class="energy-gauge-label">필요 에너지</div>
+                    <div class="energy-gauge-container">
+                        <div class="energy-gauge-fill" id="requiredEnergyGauge"></div>
+                        <div class="energy-gauge-text" id="requiredEnergyText">0%</div>
+                    </div>
+                </div>
+                <div class="energy-gauge-item current-energy">
+                    <div class="energy-gauge-label">현재 에너지</div>
+                    <div class="energy-gauge-container">
+                        <div class="energy-gauge-fill" id="currentEnergyGauge"></div>
+                        <div class="energy-gauge-text" id="currentEnergyText">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 상태 표시 -->
+        <div class="status-indicator cannot-sound" id="statusIndicator">
+            ❌ 에너지 부족 - 소리가 나지 않습니다
+        </div>
+
+        <!-- 4가지 요소 게이지 -->
+        <div class="sub-gauges-section">
+            <div class="gauge-item gauge-voice-switch">
+                <div class="gauge-label">성구전환 (100% 기여)</div>
+                <div class="gauge-container">
+                    <div class="gauge-fill" id="voiceSwitchGauge"></div>
+                </div>
+                <div class="controls">
+                    <input type="range" min="0" max="100" value="0" class="slider" id="voiceSwitchSlider">
+                </div>
+                <div class="value-display" id="voiceSwitchValue">0%</div>
+            </div>
+
+            <div class="gauge-item gauge-throat-tension">
+                <div class="gauge-label">목 조임 (50% 기여)</div>
+                <div class="gauge-container">
+                    <div class="gauge-fill" id="throatTensionGauge"></div>
+                </div>
+                <div class="controls">
+                    <input type="range" min="0" max="100" value="0" class="slider" id="throatTensionSlider">
+                </div>
+                <div class="value-display" id="throatTensionValue">0%</div>
+            </div>
+
+            <div class="gauge-item gauge-breathing">
+                <div class="gauge-label">호흡 (50% 기여)</div>
+                <div class="gauge-container">
+                    <div class="gauge-fill" id="breathingGauge"></div>
+                </div>
+                <div class="controls">
+                    <input type="range" min="0" max="100" value="0" class="slider" id="breathingSlider">
+                </div>
+                <div class="value-display" id="breathingValue">0%</div>
+            </div>
+
+            <div class="gauge-item gauge-vocal-cords">
+                <div class="gauge-label">성대 벌리기 (50% 기여)</div>
+                <div class="gauge-container">
+                    <div class="gauge-fill" id="vocalCordsGauge"></div>
+                </div>
+                <div class="controls">
+                    <input type="range" min="0" max="100" value="0" class="slider" id="vocalCordsSlider">
+                </div>
+                <div class="value-display" id="vocalCordsValue">0%</div>
+            </div>
+        </div>
+
+        <button class="reset-button" onclick="resetAll()">초기화</button>
+    </div>
+
+    <script>
+        // 현재 선택된 음 높이 (1-7)
+        let currentPitch = 1;
+
+        // 음 높이에 따른 필요 에너지 (지수적으로 증가)
+        function getRequiredEnergy(pitch) {
+            // 1: 20%, 2: 30%, 3: 43%, 4: 57%, 5: 71%, 6: 86%, 7: 100%
+            return Math.round(20 + (pitch - 1) * (80 / 6));
+        }
+
+        // SVG 곡선 그리기
+        function drawPitchCurve() {
+            const svg = document.getElementById('pitchCurve');
+            const container = document.querySelector('.pitch-graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            svg.innerHTML = '';
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.setAttribute('preserveAspectRatio', 'none');
+
+            // 배경 격자선
+            for (let i = 0; i <= 4; i++) {
+                const y = (i * height) / 4;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', '0');
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', width);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', '#e0e0e0');
+                line.setAttribute('stroke-width', '1');
+                svg.appendChild(line);
+            }
+
+            // 상향 곡선 그리기 (왼쪽 아래에서 오른쪽 위로)
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData = '';
+
+            for (let i = 0; i <= 100; i++) {
+                const x = (i / 100) * width;
+                const progress = i / 100;
+                // 아래에서 위로 올라가는 곡선
+                const y = height - (height * 0.3) - (progress * progress * height * 0.6);
+
+                if (i === 0) {
+                    pathData += `M ${x} ${y}`;
+                } else {
+                    pathData += ` L ${x} ${y}`;
+                }
+            }
+
+            path.setAttribute('d', pathData);
+            path.setAttribute('stroke', '#ff6b6b');
+            path.setAttribute('stroke-width', '3');
+            path.setAttribute('fill', 'none');
+            svg.appendChild(path);
+        }
+
+        // 음 높이 점 위치 업데이트
+        function updatePitchPoint() {
+            const point = document.getElementById('pitchPoint');
+            const container = document.querySelector('.pitch-graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // 음 높이에 따른 X 위치 (1-7을 0-100%로 매핑)
+            const xPercent = ((currentPitch - 1) / 6) * 100;
+            const x = (xPercent / 100) * width;
+
+            // Y 위치는 포물선 공식 사용
+            const normalizedX = xPercent / 100;
+            const yPercent = 100 - (30 + normalizedX * normalizedX * 60);
+            const y = (yPercent / 100) * height;
+
+            point.style.left = x + 'px';
+            point.style.top = y + 'px';
+
+            updateRequiredEnergy();
+        }
+
+        // 필요 에너지 업데이트
+        function updateRequiredEnergy() {
+            const required = getRequiredEnergy(currentPitch);
+            const gauge = document.getElementById('requiredEnergyGauge');
+            const text = document.getElementById('requiredEnergyText');
+
+            gauge.style.width = required + '%';
+            text.textContent = required + '%';
+
+            updateStatus();
+        }
+
+        // 음 높이 선택
+        function selectPitch(pitch) {
+            currentPitch = pitch;
+
+            // 버튼 활성화 상태 변경
+            const buttons = document.querySelectorAll('.pitch-button');
+            buttons.forEach((btn, index) => {
+                if (index + 1 === pitch) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            updatePitchPoint();
+        }
+
+        // 각 요소의 슬라이더와 게이지를 연결
+        const elements = [
+            { slider: 'voiceSwitchSlider', gauge: 'voiceSwitchGauge', value: 'voiceSwitchValue', weight: 1.0 },
+            { slider: 'throatTensionSlider', gauge: 'throatTensionGauge', value: 'throatTensionValue', weight: 0.5 },
+            { slider: 'breathingSlider', gauge: 'breathingGauge', value: 'breathingValue', weight: 0.5 },
+            { slider: 'vocalCordsSlider', gauge: 'vocalCordsGauge', value: 'vocalCordsValue', weight: 0.5 }
+        ];
+
+        // 각 슬라이더에 이벤트 리스너 추가
+        elements.forEach(element => {
+            const slider = document.getElementById(element.slider);
+            const gauge = document.getElementById(element.gauge);
+            const valueDisplay = document.getElementById(element.value);
+
+            slider.addEventListener('input', function() {
+                const value = this.value;
+                gauge.style.width = value + '%';
+                valueDisplay.textContent = value + '%';
+                updateCurrentEnergy();
+            });
+        });
+
+        // 현재 에너지 계산 및 업데이트
+        function updateCurrentEnergy() {
+            const voiceSwitch = parseInt(document.getElementById('voiceSwitchSlider').value);
+            const throatTension = parseInt(document.getElementById('throatTensionSlider').value);
+            const breathing = parseInt(document.getElementById('breathingSlider').value);
+            const vocalCords = parseInt(document.getElementById('vocalCordsSlider').value);
+
+            // 가중치 적용: 성구전환 100%, 나머지 50%
+            const totalEnergy = Math.min(100,
+                voiceSwitch * 1.0 +
+                throatTension * 0.5 +
+                breathing * 0.5 +
+                vocalCords * 0.5
+            );
+
+            const gauge = document.getElementById('currentEnergyGauge');
+            const text = document.getElementById('currentEnergyText');
+
+            gauge.style.width = totalEnergy + '%';
+            text.textContent = Math.round(totalEnergy) + '%';
+
+            updateStatus();
+        }
+
+        // 상태 업데이트 (소리 가능/불가능)
+        function updateStatus() {
+            const required = getRequiredEnergy(currentPitch);
+            const voiceSwitch = parseInt(document.getElementById('voiceSwitchSlider').value);
+            const throatTension = parseInt(document.getElementById('throatTensionSlider').value);
+            const breathing = parseInt(document.getElementById('breathingSlider').value);
+            const vocalCords = parseInt(document.getElementById('vocalCordsSlider').value);
+
+            const current = Math.min(100,
+                voiceSwitch * 1.0 +
+                throatTension * 0.5 +
+                breathing * 0.5 +
+                vocalCords * 0.5
+            );
+
+            const indicator = document.getElementById('statusIndicator');
+
+            if (current >= required) {
+                indicator.className = 'status-indicator can-sound';
+                indicator.textContent = '✅ 에너지 충족 - 소리가 납니다!';
+            } else {
+                indicator.className = 'status-indicator cannot-sound';
+                const needed = Math.round(required - current);
+                indicator.textContent = `❌ 에너지 부족 - ${needed}% 더 필요합니다`;
+            }
+        }
+
+        // 초기화 함수
+        function resetAll() {
+            elements.forEach(element => {
+                const slider = document.getElementById(element.slider);
+                const gauge = document.getElementById(element.gauge);
+                const valueDisplay = document.getElementById(element.value);
+
+                slider.value = 0;
+                gauge.style.width = '0%';
+                valueDisplay.textContent = '0%';
+            });
+
+            currentPitch = 1;
+            selectPitch(1);
+            updateCurrentEnergy();
+        }
+
+        // 초기화
+        window.addEventListener('load', function() {
+            drawPitchCurve();
+            updatePitchPoint();
+            updateCurrentEnergy();
+        });
+
+        window.addEventListener('resize', function() {
+            drawPitchCurve();
+            updatePitchPoint();
+        });
+    </script>
+</body>
+</html>
